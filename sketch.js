@@ -2,11 +2,11 @@
 var adventurer, adventurer_walking, adventrhit_img, ground, ground_running, score, ground_inv, rand_clouds, cloud, cloud_running, restartsp, restartImg, adventstop_img;
 var obstacle, obst1, obst2, obst3, obst4, obst5, obst6, obst7, obst8, obst, randst, clouds_grp, obstacle_grp, gameoverImage, gameover;
 var adventurer_jump, adventurer_die, adventurer_chkpoint, adventrhit_img, Rom_Guard, Rom_Guardmov, coins, coin_grp; 
-var rs5coinImage, rs10coinImage, rs20coinImage, goldcoinImage, totcoin;
+var rs5coinImage, rs10coinImage, rs20coinImage, goldcoinImage, totcoin, Rom_Guardstop;
 var PLAY = 1;
 var END = 0;
 var gamestate = PLAY;
-var sound1 = "playsound";
+
 //preloading the graphics of adventurer for running animation 
 function preload(){
 adventurer_walking = loadAnimation("ad01.png", "ad02.png", "ad03.png", "ad04.png", "ad05.png", "ad06.png", "ad07.png", "ad08.png", "ad09.png", "ad10.png", "ad11.png", "ad12.png", "ad13.png", "ad14.png", "ad15.png", "ad16.png", "ad17.png", "ad18.png", "ad19.png", "ad20.png", "ad21.png", "ad22.png", "ad23.png", "ad24.png", "ad25.png");
@@ -29,7 +29,7 @@ adventurer_walking = loadAnimation("ad01.png", "ad02.png", "ad03.png", "ad04.png
   obst7 = loadImage ("Stone7-rmbg.png");
   obst8 = loadImage ("Stone8-rmbg.png");
   Rom_Guardmov = loadAnimation("grd36.png", "grd37.png", "grd38.png", "grd39.png", "grd40.png", "grd41.png", "grd42.png", "grd43.png", "grd44.png", "grd45.png", "grd46.png");
- 
+  Rom_Guardstop = loadAnimation ("grd39.png");
   gameoverImage = loadImage ("gameOver.png");
   restartImg = loadImage ("restart.png");
 
@@ -65,6 +65,14 @@ function setup() {
     adventurer.addAnimation ("ADVTR_STOPPED", adventstop_img);
     //resizing the adventurer to the canvas
     adventurer.scale = 0.5;
+
+    Rom_Guard = createSprite (windowWidth-80, 265, 50, 20);
+    Rom_Guard.addAnimation ("Roman_Guardmoving", Rom_Guardmov);
+    Rom_Guard.addAnimation ("Roman_Guardstop", Rom_Guardstop);  
+    Rom_Guard.scale = 0.45;
+    Rom_Guard.velocityX = -15;
+    Rom_Guard.lifetime = 700; 
+
     obstacle_grp = createGroup();
     clouds_grp = createGroup(); 
     coin_grp = createGroup(); 
@@ -81,11 +89,9 @@ function draw(){
 
   //creating background
   background("light blue");
-  
   drawSprites();  
   //giving a title to the game
-  console.log(sound1); 
-  textSize(40);
+   textSize(40);
   fill("red");
      text("THE ADVENTURER RUNNER GAME!", windowWidth/2-300, 35); 
 
@@ -94,10 +100,10 @@ function draw(){
    text ("Score : "+ score, width-130, 30); 
   text ("Coins : "+ totcoin, width-130, 55);
 
-   if (gamestate ==PLAY) 
+   if (gamestate == PLAY) 
    {
     
-    if (keyDown ("space") || (touches.length >0))
+    if (keyDown ("space") && adventurer.y>= 120 ||(touches.length >0))
     {
       //assigning the Y velocity to the adventurer on pressing space
       adventurer.velocityY = -7;
@@ -120,18 +126,19 @@ function draw(){
    
     ground.velocityX = -(1 + 2 * (score/700));
    
-    if (ground.x < 530) {
+    if (ground.x < 630) {
      ground.x = ground.width/2 +600;
     
      //controlling the adventurer with space key to jump on facing the obstacles
-             }
-    //fixing the adventurerto the ground sprite 
+          }
+
+    //fixing the adventurer to the ground sprite 
     adventurer.collide (ground_inv);
     if ((coin_grp.isTouching(adventurer)) && gamestate == PLAY)  
     {
       totcoin += 100;
       adventurer_chkpoint.play(); 
-      coin_grp.destroyEach(); 
+      coin_grp[0].destroy(); 
 
     }
 
@@ -139,11 +146,14 @@ function draw(){
       rand_clouds();
       coincoll(); 
       obstacle();
-       
-       if (obstacle_grp.isTouching(adventurer)) 
+
+
+       if ((obstacle_grp.isTouching(adventurer)) || (Rom_Guard.isTouching(adventurer))) 
       {
+        adventurer_die.play();
+       // Rom_Guard.changeAnimation("Roman_Guardstop", Rom_Guardstop); 
         gamestate = END;
-    //    Rom_Guard.changeAnimation("Guard_stops", Rom_Guardstop); 
+        
       }
    }
    else if (gamestate == END) 
@@ -153,15 +163,17 @@ function draw(){
    
     ground.velocityX = 0;
     adventurer.velocityY = 0;
-    adventurer.changeImage ("ADVTR_HIT",  adventrhit_img);
-    adventurer.changeImage ("ADVTR_STOPPED", adventstop_img);
-    adventurer_die.play();
+    
+    adventurer.changeAnimation ("ADVTR_STOPPED", adventstop_img);
+    Rom_Guard.changeAnimation("Roman_Guardstop", Rom_Guardstop);
     clouds_grp.setVelocityXEach (0);
     obstacle_grp.setVelocityXEach (0);
     coin_grp.setVelocityXEach (0);
     clouds_grp.setLifetimeEach(-1);
     obstacle_grp.setLifetimeEach(-1);
     coin_grp.setLifetimeEach(-1);
+    Rom_Guard.velocityX = 0;
+    Rom_Guard.destroy(); 
                                                                                                                                                                                                                                                                                                                                                   
     adventurer.collide (ground_inv);
 
@@ -233,7 +245,7 @@ function obstacle ()
     obstacle_grp.add(obst);
 
  //generating random obstacles on the screen
- var randst = Math.round(random(1,9));
+ var randst = Math.round(random(1,8));
  
  //adding random images to the obstacles
   switch (randst)
@@ -254,15 +266,14 @@ function obstacle ()
           break;
   case 8: obst.addImage ("8th_OBSTACLE", obst8);
           break;
-  case 9: obst.addAnimation ("Roman_Guardmoving", Rom_Guardmov);
-          break;
   default: break;
         }  
-    }
+     }
   } 
 
+
   function coincoll () 
-{
+  {
   if (frameCount % 55 === 0) 
   {
   //creating coins sprite and group
@@ -289,6 +300,6 @@ function obstacle ()
           coins.scale = 0.1;
           break;
   default: break;
-        }  
+        }        
     }
   } 
